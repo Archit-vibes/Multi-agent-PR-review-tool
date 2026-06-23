@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI PR Reviewer Test UI</title>
+    <style>
+        body { font-family: sans-serif; padding: 2rem; max-width: 800px; margin: 0 auto; }
+        .btn { padding: 10px 20px; background-color: #0366d6; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        .btn:hover { background-color: #0056b3; }
+        pre { background: #f6f8fa; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .alert { padding: 10px; background: #fff3cd; color: #856404; border: 1px solid #ffeeba; border-radius: 5px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <h1>AI PR Reviewer - Local Test UI</h1>
+    <div class="alert">
+        <strong>Note:</strong> This simulates a webhook event. If you have <code>GITHUB_WEBHOOK_SECRET</code> set in your <code>.env</code> file, this local test will fail because the dummy signature will be invalid. To test this button successfully, temporarily leave the secret empty.
+    </div>
+    <p>This is a basic frontend to manually test the FastAPI webhook endpoint without using Postman or cURL.</p>
+    
+    <button class="btn" onclick="sendWebhook()">Simulate PR Webhook</button>
+    
+    <h3>Response:</h3>
+    <pre id="response">Waiting...</pre>
+
+    <script>
+        async function sendWebhook() {
+            const responseEl = document.getElementById('response');
+            responseEl.textContent = "Sending request...";
+            
+            // Dummy GitHub PR Payload
+            const payload = {
+                action: "opened",
+                pull_request: { number: 42, title: "Update README" },
+                repository: { full_name: "test-user/test-repo" }
+            };
+
+            try {
+                const res = await fetch("http://localhost:8000/api/webhook", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-github-event": "pull_request",
+                        // This dummy signature is used to test. 
+                        // In production, GitHub calculates this using the webhook secret.
+                        "x-hub-signature-256": "sha256=dummy_signature" 
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                let data;
+                try {
+                    data = await res.json();
+                } catch (e) {
+                    data = await res.text();
+                }
+                
+                responseEl.textContent = `Status Code: ${res.status}\n\n` + JSON.stringify(data, null, 2);
+            } catch (error) {
+                responseEl.textContent = "Error: " + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
