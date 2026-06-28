@@ -9,9 +9,17 @@ class Settings(BaseSettings):
     GITHUB_WEBHOOK_SECRET: Optional[str] = None
     GITHUB_PRIVATE_KEY: Optional[str] = None
     
-    # Redis / Celery
-    REDIS_URL: str = "redis://localhost:6379/0"
+    # Database
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/pr_reviewer"
     
+    # LLM and Tracing
+    GROQ_API_KEY: Optional[str] = None
+    GEMINI_API_KEY: Optional[str] = None
+    LANGCHAIN_TRACING_V2: str = "false"
+    LANGCHAIN_API_KEY: Optional[str] = None
+    LANGCHAIN_PROJECT: str = "pr_reviewer"
+    
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 settings = Settings()
