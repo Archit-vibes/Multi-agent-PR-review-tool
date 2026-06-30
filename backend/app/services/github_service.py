@@ -7,7 +7,9 @@ async def process_github_webhook(event_type: str, payload: dict):
     """
     Process the GitHub webhook event asynchronously using FastAPI BackgroundTasks.
     """
+    print("=" * 30)
     print(f"Received GitHub event: {event_type}")
+    print("=" * 30)
     
     # Save the raw event
     try:
@@ -80,7 +82,9 @@ async def process_github_webhook(event_type: str, payload: dict):
             
             # Invoke LangGraph pipeline
             from app.agents.graph import review_graph
+            print("=" * 30)
             print("Triggering LangGraph review pipeline...")
+            print("=" * 30)
             
             initial_state = {
                 "pr_number": pr_number,
@@ -100,7 +104,9 @@ async def process_github_webhook(event_type: str, payload: dict):
                 "quality": final_state.get("quality_findings", [])
             }
             
+            print("=" * 30)
             print("Successfully completed PR review!")
+            print("=" * 30)
             
             # Save the final review back to the database
             async with AsyncSessionLocal() as session:
@@ -119,15 +125,69 @@ async def process_github_webhook(event_type: str, payload: dict):
             
             # Post the final review to GitHub PR
             try:
-                await client.post_pr_comment(repo_name, pr_number, final_review)
-                print(f"Successfully posted review comment to GitHub PR #{pr_number}")
+                suggestions = final_state.get("suggestions", [])
+                commit_id = payload.get("pull_request", {}).get("head", {}).get("sha")
+
+                print("=" * 30)
+                print(f"DEBUG: Total suggestions to post: {len(suggestions)}")
+                print(f"DEBUG: commit_id = {commit_id}")
+                print("=" * 30)
+                
+                if suggestions and commit_id:
+                    for i, s in enumerate(suggestions):
+                        print(f"DEBUG: Posting suggestion {i+1}/{len(suggestions)} -> {s.get('file')}:{s.get('line')}")
+                        body = f"**{s.get('issue', 'Issue')}**\n{s.get('reason', '')}"
+                        if s.get("replacement"):
+                            replacement_text = str(s['replacement']).strip()
+                            # If the AI accidentally wrapped the code in markdown backticks, strip them to prevent breaking the suggestion block
+                            if replacement_text.startswith("```"):
+                                lines = replacement_text.split("\n")
+                                if len(lines) > 1 and lines[0].startswith("```"):
+                                    lines = lines[1:]
+                                if len(lines) > 0 and lines[-1].strip().startswith("```"):
+                                    lines = lines[:-1]
+                                replacement_text = "\n".join(lines).strip()
+                            
+                            body += f"\n\n```suggestion\n{replacement_text}\n```"
+                        
+                        comment = {
+                            "path": s.get("file"),
+                            "line": int(s.get("line")),
+                            "side": "RIGHT",
+                            "body": body
+                        }
+                        
+                        try:
+                            # We must post it as a Review, otherwise GitHub disables the 'Apply suggestion' button for standalone comments!
+                            await client.post_pr_review(repo_name, pr_number, "", commit_id, [comment])
+                            print(f"  [OK] Inline review posted: {s.get('file')}:{s.get('line')}")
+                        except Exception as e:
+                            resp_text = getattr(getattr(e, "response", None), "text", "N/A")
+                            print(f"  [FAIL] Inline review failed: {s.get('file')}:{s.get('line')} -> {e}")
+                            print(f"  [FAIL] GitHub said: {resp_text}")
+                elif not commit_id:
+                    print("DEBUG: No commit_id found — falling back to plain summary comment!")
+                    await client.post_pr_comment(repo_name, pr_number, final_review)
+                    print(f"[OK] Fallback summary comment posted to GitHub PR #{pr_number}")
+                else:
+                    print("DEBUG: No suggestions — posting plain summary comment as fallback!")
+                    await client.post_pr_comment(repo_name, pr_number, final_review)
+                    print(f"[OK] Summary comment posted to GitHub PR #{pr_number}")
+                    
+                print("=" * 30)
+                print("[DONE] GitHub posting complete.")
+                print("=" * 30)
             except Exception as e:
-                print(f"Failed to post comment to GitHub: {e}")
+                print(f"[FAIL] Failed to post comment to GitHub: {e}")
 
         except Exception as e:
+            print("=" * 30)
             print(f"Failed to fetch PR details from GitHub: {e}")
+            print("=" * 30)
             
+        print("=" * 30)
         print(f"Finished processing PR #{pr_number}")
+        print("=" * 30)
         return {"status": "success", "repo": repo_name, "pr": pr_number}
     
     return {"status": "ignored", "event": event_type}

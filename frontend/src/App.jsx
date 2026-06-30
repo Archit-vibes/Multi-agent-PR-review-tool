@@ -222,12 +222,46 @@ function PrDetail({ pr }) {
     }
     return (
       <div className="agent-finding-list">
-        {findings.map((f, i) => (
-          <div key={i} className="agent-finding-item">
-            <div className="agent-finding-icon">{icon}</div>
-            <div>{f}</div>
-          </div>
-        ))}
+        {findings.map((f, i) => {
+          // Fallback if finding is just a string (old data)
+          if (typeof f === 'string') {
+            return (
+              <div key={i} className="agent-finding-item">
+                <div className="agent-finding-icon">{icon}</div>
+                <div>{f}</div>
+              </div>
+            )
+          }
+          // New structured data
+          return (
+            <div key={i} className="agent-finding-item">
+              <div className="agent-finding-icon">{icon}</div>
+              <div style={{ flex: 1 }}>
+                <strong style={{ display: 'block', marginBottom: '4px' }}>{f.issue}</strong>
+                {f.file && f.line && (
+                  <div style={{ fontSize: '13px', color: 'var(--ink-muted)', marginBottom: '8px' }}>
+                    {f.file}:{f.line}
+                  </div>
+                )}
+                <div style={{ marginBottom: '8px' }}>{f.reason}</div>
+                {f.replacement && (
+                  <div style={{ 
+                    background: '#f6f8fa', 
+                    border: '1px solid var(--hairline)', 
+                    borderRadius: '6px', 
+                    padding: '8px',
+                    fontFamily: 'monospace',
+                    fontSize: '13px',
+                    whiteSpace: 'pre-wrap'
+                  }}>
+                    <strong style={{ display: 'block', marginBottom: '4px', color: 'var(--ink-muted)' }}>Suggested Fix:</strong>
+                    {f.replacement}
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })}
       </div>
     )
   }

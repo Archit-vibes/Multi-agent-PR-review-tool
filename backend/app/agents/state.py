@@ -11,9 +11,10 @@ class ReviewState(TypedDict, total=False):
     next_agents: List[str]
     
     # Specific agent outputs
-    security_findings: List[str]
-    bug_findings: List[str]
-    quality_findings: List[str]
+    security_findings: List[Dict[str, Any]]
+    bug_findings: List[Dict[str, Any]]
+    quality_findings: List[Dict[str, Any]]
     
     # Aggregator output
     final_review: str
+    suggestions: List[Dict[str, Any]]

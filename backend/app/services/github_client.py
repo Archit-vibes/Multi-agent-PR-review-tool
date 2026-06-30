@@ -88,3 +88,55 @@ class GitHubClient:
             )
             response.raise_for_status()
             return response.json()
+
+    async def post_pr_review(self, repo_full_name: str, pr_number: int, body: str, commit_id: str, comments: list) -> dict:
+        if not self.token:
+            await self.authenticate()
+            
+        headers = {
+            "Authorization": f"token {self.token}",
+            "Accept": "application/vnd.github.v3+json"
+        }
+        
+        payload = {
+            "body": body,
+            "event": "COMMENT",
+            "commit_id": commit_id,
+            "comments": comments
+        }
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"https://api.github.com/repos/{repo_full_name}/pulls/{pr_number}/reviews",
+                headers=headers,
+                json=payload
+            )
+            response.raise_for_status()
+            return response.json()
+
+    async def post_pr_inline_comment(self, repo_full_name: str, pr_number: int, commit_id: str, path: str, line: int, body: str) -> dict:
+        if not self.token:
+            await self.authenticate()
+            
+        headers = {
+            "Authorization": f"token {self.token}",
+            "Accept": "application/vnd.github.v3+json"
+        }
+        
+        payload = {
+            "body": body,
+            "commit_id": commit_id,
+            "path": path,
+            "line": line,
+            "side": "RIGHT"
+        }
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"https://api.github.com/repos/{repo_full_name}/pulls/{pr_number}/comments",
+                headers=headers,
+                json=payload
+            )
+            response.raise_for_status()
+            return response.json()
+

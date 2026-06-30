@@ -42,7 +42,24 @@ def security_agent(state: ReviewState):
     diff = state.get("diff", "")
     
     prompt = f"""You are a Security Review Agent. Review the following PR diff for security vulnerabilities.
-Return your findings as a JSON array of strings. If none, return [].
+If a problem can be fixed, generate the corrected replacement code.
+
+Return JSON only.
+Your output MUST be a JSON array of objects with the following schema:
+[
+  {{
+    "file": "...",
+    "line": 42,
+    "issue": "...",
+    "severity": "...",
+    "reason": "...",
+    "old_code": "...",
+    "replacement": "..."
+  }}
+]
+IMPORTANT: The `line` MUST be a line number that was modified or added (i.e. starts with `+`) in the right side of the diff. Do not suggest changes on unchanged lines (context lines), as GitHub will reject them!
+If an issue cannot safely be fixed automatically, set replacement to null.
+If there are no findings, return [].
 Do not include markdown block ticks around JSON.
 
 Diff:
@@ -57,7 +74,7 @@ Diff:
             content = content[3:-3].strip()
         findings = json.loads(content)
     except:
-        findings = ["Failed to parse security findings."]
+        findings = [{"issue": "Failed to parse security findings."}]
     
     return {"security_findings": findings}
 
@@ -66,7 +83,24 @@ def bug_agent(state: ReviewState):
     diff = state.get("diff", "")
     
     prompt = f"""You are a Bug Review Agent. Review the following PR diff for logic errors or bugs.
-Return your findings as a JSON array of strings. If none, return [].
+If a problem can be fixed, generate the corrected replacement code.
+
+Return JSON only.
+Your output MUST be a JSON array of objects with the following schema:
+[
+  {{
+    "file": "...",
+    "line": 42,
+    "issue": "...",
+    "severity": "...",
+    "reason": "...",
+    "old_code": "...",
+    "replacement": "..."
+  }}
+]
+IMPORTANT: The `line` MUST be a line number that was modified or added (i.e. starts with `+`) in the right side of the diff. Do not suggest changes on unchanged lines (context lines), as GitHub will reject them!
+If an issue cannot safely be fixed automatically, set replacement to null.
+If there are no findings, return [].
 Do not include markdown block ticks around JSON.
 
 Diff:
@@ -81,7 +115,7 @@ Diff:
             content = content[3:-3].strip()
         findings = json.loads(content)
     except:
-        findings = ["Failed to parse bug findings."]
+        findings = [{"issue": "Failed to parse bug findings."}]
         
     return {"bug_findings": findings}
 
@@ -90,7 +124,24 @@ def quality_agent(state: ReviewState):
     diff = state.get("diff", "")
     
     prompt = f"""You are a Code Quality Review Agent. Review the following PR diff for style, readability, and maintainability.
-Return your findings as a JSON array of strings. If none, return [].
+If a problem can be fixed, generate the corrected replacement code.
+
+Return JSON only.
+Your output MUST be a JSON array of objects with the following schema:
+[
+  {{
+    "file": "...",
+    "line": 42,
+    "issue": "...",
+    "severity": "...",
+    "reason": "...",
+    "old_code": "...",
+    "replacement": "..."
+  }}
+]
+IMPORTANT: The `line` MUST be a line number that was modified or added (i.e. starts with `+`) in the right side of the diff. Do not suggest changes on unchanged lines (context lines), as GitHub will reject them!
+If an issue cannot safely be fixed automatically, set replacement to null.
+If there are no findings, return [].
 Do not include markdown block ticks around JSON.
 
 Diff:
@@ -105,29 +156,97 @@ Diff:
             content = content[3:-3].strip()
         findings = json.loads(content)
     except:
-        findings = ["Failed to parse quality findings."]
+        findings = [{"issue": "Failed to parse quality findings."}]
         
     return {"quality_findings": findings}
 
 def aggregator(state: ReviewState):
-    llm = get_llm()
-    
     sec = state.get("security_findings", [])
     bug = state.get("bug_findings", [])
     qual = state.get("quality_findings", [])
-    
-    prompt = f"""You are an Aggregator Agent. Compile the following findings into a final, professional GitHub PR review comment in Markdown.
 
-Security Findings:
-{sec}
+    all_findings = []
+    if isinstance(sec, list): all_findings.extend(sec)
+    if isinstance(bug, list): all_findings.extend(bug)
+    if isinstance(qual, list): all_findings.extend(qual)
 
-Bug Findings:
-{bug}
+    suggestions = []
+    for f in all_findings:
+        if isinstance(f, dict) and f.get("replacement") and f.get("file") and f.get("line"):
+            suggestions.append(f)
 
-Quality Findings:
-{qual}
+    # Severity emoji map
+    severity_emoji = {
+        "critical": "🔴",
+        "high":     "🟠",
+        "medium":   "🟡",
+        "minor":    "🔵",
+        "low":      "🟢",
+    }
 
-Combine overlapping points, ignore parser errors, and structure it cleanly. If there are no findings, state that the code looks good.
-"""
-    response = llm.invoke([HumanMessage(content=prompt)])
-    return {"final_review": response.content}
+    def format_finding(f):
+        if not isinstance(f, dict):
+            return ""
+        severity = str(f.get("severity", "minor")).lower()
+        emoji = severity_emoji.get(severity, "⚪")
+        issue = f.get("issue", "Issue")
+        file_path = f.get("file", "unknown file")
+        line = f.get("line", "?")
+        reason = f.get("reason", "")
+        old_code = f.get("old_code", "")
+        replacement = f.get("replacement", "")
+
+        # Detect language from file extension for syntax highlighting
+        ext = file_path.rsplit(".", 1)[-1] if "." in file_path else ""
+        lang_map = {"js": "javascript", "jsx": "javascript", "ts": "typescript", "tsx": "typescript",
+                    "py": "python", "css": "css", "html": "html", "json": "json", "md": "markdown"}
+        lang = lang_map.get(ext, "")
+
+        lines = []
+        lines.append(f"- {emoji} **{severity.capitalize()} Severity:** `{issue}`")
+        lines.append(f"  - **File:** `{file_path}`")
+        lines.append(f"  - **Line:** {line}")
+        if reason:
+            lines.append(f"  - **Reason:** {reason}")
+        if old_code:
+            lines.append(f"  - **Old Code:**")
+            lines.append(f"    ```{lang}")
+            lines.append(f"    {old_code}")
+            lines.append(f"    ```")
+        if replacement:
+            lines.append(f"  - **Suggested Fix:**")
+            lines.append(f"    ```{lang}")
+            lines.append(f"    {replacement}")
+            lines.append(f"    ```")
+        return "\n".join(lines)
+
+    # Group by category
+    sections = [
+        ("🔒 Security Findings", [f for f in sec if isinstance(f, dict) and f.get("issue")]),
+        ("🐛 Bug Findings",      [f for f in bug if isinstance(f, dict) and f.get("issue")]),
+        ("✨ Code Quality Findings", [f for f in qual if isinstance(f, dict) and f.get("issue")]),
+    ]
+
+    review_parts = ["## 🤖 AI Code Review Summary", ""]
+
+    has_findings = False
+    for section_title, findings in sections:
+        real_findings = [f for f in findings if isinstance(f, dict) and f.get("issue") and "Failed to parse" not in str(f.get("issue", ""))]
+        if not real_findings:
+            continue
+        has_findings = True
+        review_parts.append(f"### {section_title}")
+        review_parts.append("")
+        for f in real_findings:
+            review_parts.append(format_finding(f))
+            review_parts.append("")
+
+    if not has_findings:
+        review_parts.append("✅ **No issues found.** The code looks good!")
+
+    review_parts.append("---")
+    review_parts.append("*Review generated by the Multi-Agent PR Review Tool*")
+
+    final_review = "\n".join(review_parts)
+    return {"final_review": final_review, "suggestions": suggestions}
+
