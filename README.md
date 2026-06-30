@@ -74,6 +74,15 @@ Whenever a Pull Request is opened or updated:
 
 ---
 
+## Architecture Highlights
+
+- 🤖 Multi-agent orchestration using LangGraph with conditional routing.
+- 🔄 Automatic LLM failover using LiteLLM (Groq → Gemini) for higher availability.
+- 📊 LangSmith tracing for end-to-end observability, debugging, and prompt evaluation.
+- ⚡ Fully asynchronous FastAPI backend with background webhook processing.
+- 🔐 Secure GitHub App authentication using JWT and Installation Access Tokens.
+- 💬 AI-generated GitHub Suggested Changes that developers can apply directly from Pull Requests.
+
 ## Key Features
 
 ### Multi-Agent Code Review
