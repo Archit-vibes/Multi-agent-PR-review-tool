@@ -385,9 +385,3 @@ Project Link:
 https://github.com/Archit-vibes/Multi-agent-PR-review-tool
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-Project Link:
-
-https://github.com/Archit-vibes/agentic-ai-pr-reviewer
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
