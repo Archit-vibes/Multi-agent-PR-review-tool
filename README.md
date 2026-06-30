@@ -7,11 +7,11 @@
 An AI-powered multi-agent GitHub Pull Request reviewer that automatically analyzes code, detects security vulnerabilities, identifies bugs, reviews code quality, and generates GitHub Suggested Changes developers can apply with a single click.
 <br />
 <br />
-<a href="#">View Demo</a>
+<a href="https://youtu.be/WN5023Hkznw">View Demo</a>
 &middot;
-<a href="https://github.com/Archit-vibes/agentic-ai-pr-reviewer/issues">Report Bug</a>
+<a href="https://github.com/Archit-vibes/Multi-agent-PR-review-tool/issues">Report Bug</a>
 &middot;
-<a href="https://github.com/Archit-vibes/agentic-ai-pr-reviewer/issues">Request Feature</a>
+<a href="https://github.com/Archit-vibes/Multi-agent-PR-review-tool/issues">Request Feature</a>
 </p>
 
 ---
@@ -245,9 +245,9 @@ Follow the steps below to run the project locally.
 ### Clone Repository
 
 ```sh
-git clone https://github.com/Archit-vibes/agentic-ai-pr-reviewer.git
+git clone https://github.com/Archit-vibes/Multi-agent-PR-review-tool.git
 
-cd agentic-ai-pr-reviewer
+cd Multi-agent-PR-review-tool
 ```
 
 ### Backend
@@ -378,7 +378,13 @@ Distributed under the MIT License.
 
 GitHub: https://github.com/Archit-vibes
 
-LinkedIn: https://linkedin.com/in/your-linkedin
+LinkedIn: https://www.linkedin.com/in/archit-sharma2006/
+
+Project Link:
+
+https://github.com/Archit-vibes/Multi-agent-PR-review-tool
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 Project Link:
 
